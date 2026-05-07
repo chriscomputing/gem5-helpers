@@ -6,11 +6,14 @@
 from .analysis import (
     Gem5AnalysisError,
     build_run_report,
+    list_run_names,
+    list_stat_names,
     max_run_by_stat,
     mean_stat,
     min_run_by_stat,
     render_run_report_csv,
     render_run_report_markdown,
+    select_runs,
     sort_runs_by_stat,
 )
 from .runs import Gem5Run, load_run, load_runs
@@ -30,6 +33,8 @@ __all__ = [
     "Gem5Run",
     "Gem5StatsError",
     "build_run_report",
+    "list_run_names",
+    "list_stat_names",
     "load_run",
     "load_runs",
     "max_run_by_stat",
@@ -39,6 +44,7 @@ __all__ = [
     "parse_stats_dump",
     "render_run_report_csv",
     "render_run_report_markdown",
+    "select_runs",
     "sort_runs_by_stat",
     "split_stats_dumps",
 ]

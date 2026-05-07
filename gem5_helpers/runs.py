@@ -6,9 +6,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from json import load as json_load
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .stats import Gem5StatsError, load_stats_file
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 
 class Gem5RunError(ValueError):
@@ -99,7 +102,7 @@ def load_runs(
     parent_dir: str | Path,
     dump_index: int = 0,
     include_run_path: bool = True,
-):
+) -> pd.DataFrame:
     """Load all valid run directories beneath a parent directory into a dataframe."""
     run_dirs = discover_run_directories(parent_dir)
     if not run_dirs:

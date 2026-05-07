@@ -14,7 +14,13 @@ Example outputs live under `examples/`.
 
 - `gem5_helpers.load_run(path, dump_index=0)`: load one run directory
 - `gem5_helpers.load_runs(parent_dir, dump_index=0)`: load all valid run
-  directories beneath a parent directory into one wide dataframe
+  directories beneath a parent directory into one pandas dataframe
+- `gem5_helpers.list_run_names(frame)`: list run names in dataframe row order
+- `gem5_helpers.list_stat_names(frame)`: list stat columns in dataframe column
+  order
+- `gem5_helpers.select_runs(frame, run_names=None, stat_names=None)`: filter
+  the batch dataframe down to selected runs and stat columns while preserving
+  metadata columns
 - `gem5_helpers.mean_stat(frame, stat_name)`: compute the mean of a numeric
   stat column across runs
 - `gem5_helpers.min_run_by_stat(frame, stat_name)`: return the run row with the
@@ -36,6 +42,62 @@ optionally a `run_path` column for traceability.
 
 The analysis helpers operate on the batch dataframe returned by `load_runs(...)`
 and keep raw stat values unchanged.
+
+## Dataframe Contract
+
+`load_runs(...)` returns a pandas `DataFrame`. That is part of the public API.
+
+Documented schema:
+
+- one row per discovered run directory
+- `run_name`: required, child directory name
+- `dump_index`: required, zero-based selected stats dump index
+- `run_path`: optional, included unless `include_run_path=False`
+- stat columns: one column per parsed gem5 stat, in first-seen order across runs
+
+Behavior guarantees:
+
+- row order follows sorted child-directory names on disk
+- `run_name` values identify runs for selection and reporting
+- missing stats remain missing in the dataframe and may appear as `NaN`
+- analysis helpers preserve raw stat values and do not normalize them
+
+## Custom Analysis Script
+
+```python
+from gem5_helpers import (
+    list_run_names,
+    list_stat_names,
+    load_runs,
+    mean_stat,
+    render_run_report_markdown,
+    select_runs,
+    sort_runs_by_stat,
+)
+
+frame = load_runs("examples", include_run_path=False)
+
+available_runs = list_run_names(frame)
+available_stats = list_stat_names(frame)
+
+selected = select_runs(
+    frame,
+    run_names=["default_op2_loop0", "config1_loop1"],
+    stat_names=["simSeconds", "simTicks"],
+)
+
+fastest_first = sort_runs_by_stat(selected, "simSeconds")
+mean_sim_seconds = mean_stat(selected, "simSeconds")
+
+markdown_table = render_run_report_markdown(
+    selected,
+    stat_names=["simSeconds", "simTicks"],
+)
+```
+
+Use `select_runs(...)` when you want a dataframe that is still convenient for
+custom pandas work. Use `build_run_report(...)` or the render helpers when you
+want a narrow export-oriented view.
 
 ## Reporting Example
 
@@ -63,6 +125,23 @@ csv_text = render_run_report_csv(
 )
 ```
 
+## API Stability
+
+Stable public API:
+
+- functions and classes exported from `gem5_helpers`
+- the `Gem5Run` dataclass
+- the documented `load_runs(...)` dataframe contract above
+
+Internal implementation details:
+
+- underscore-prefixed helpers inside modules
+- exact internal organization within `analysis.py`, `runs.py`, and `stats.py`
+- test doubles and test-only helpers
+
+If you are writing custom scripts, prefer importing from `gem5_helpers` rather
+than deep-importing private helpers from submodules.
+
 ## Goals
 
 - Parse gem5 output directories in a repeatable way
@@ -73,8 +152,11 @@ csv_text = render_run_report_csv(
 ## Repository Layout
 
 - `analyse_gem5.py`: command-line entry point
-- `gem5_helpers/`: reusable parsing and loading library
+- `gem5_helpers/stats.py`: raw stats parsing into Python data structures
+- `gem5_helpers/runs.py`: run discovery/loading into `Gem5Run` and batch frames
+- `gem5_helpers/analysis.py`: pandas-based analysis and reporting helpers
 - `examples/`: sample gem5 output directories
+- `CONTRIBUTING.md`: contributor workflow and extension guidance
 - `CODEX.md`: durable notes, decisions, and learnings
 - `SCRATCHPAD.md`: short-lived working notes
 

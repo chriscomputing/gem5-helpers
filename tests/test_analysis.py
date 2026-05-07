@@ -13,11 +13,14 @@ from unittest.mock import patch
 from gem5_helpers.analysis import (
     Gem5AnalysisError,
     build_run_report,
+    list_run_names,
+    list_stat_names,
     max_run_by_stat,
     mean_stat,
     min_run_by_stat,
     render_run_report_csv,
     render_run_report_markdown,
+    select_runs,
     sort_runs_by_stat,
 )
 
@@ -214,6 +217,53 @@ class AnalysisTests(unittest.TestCase):
             ["config1_loop1", "default_op2_loop0"],
         )
 
+    def test_list_run_names_returns_frame_order(self) -> None:
+        frame = self.load_frame()
+        self.assertEqual(
+            list_run_names(frame),
+            ["config1_loop1", "default_op2_loop0"],
+        )
+
+    def test_list_stat_names_omits_metadata_columns(self) -> None:
+        frame = self.load_frame()
+        stat_names = list_stat_names(frame)
+        self.assertIn("simSeconds", stat_names)
+        self.assertIn("simTicks", stat_names)
+        self.assertNotIn("run_name", stat_names)
+        self.assertNotIn("dump_index", stat_names)
+        self.assertNotIn("run_path", stat_names)
+
+    def test_select_runs_filters_runs_and_stats(self) -> None:
+        frame = self.load_frame()
+        selected = select_runs(
+            frame,
+            run_names=["default_op2_loop0"],
+            stat_names=["simTicks", "simSeconds"],
+        )
+        self.assertEqual(
+            selected.columns,
+            ["run_name", "dump_index", "run_path", "simTicks", "simSeconds"],
+        )
+        self.assertEqual(len(selected._records), 1)
+        self.assertEqual(selected._records[0]["run_name"], "default_op2_loop0")
+        self.assertEqual(selected._records[0]["simTicks"], 450521000.0)
+        self.assertEqual(selected._records[0]["simSeconds"], 0.000451)
+
+    def test_select_runs_preserves_frame_order_by_default(self) -> None:
+        frame = self.load_frame()
+        selected = select_runs(frame, stat_names=["simSeconds"])
+        self.assertEqual(
+            [run["run_name"] for run in selected._records],
+            ["config1_loop1", "default_op2_loop0"],
+        )
+
+    def test_select_runs_defaults_to_all_stats(self) -> None:
+        frame = self.load_frame(include_run_path=False)
+        selected = select_runs(frame, run_names=["config1_loop1"])
+        self.assertEqual(selected.columns[:2], ["run_name", "dump_index"])
+        self.assertIn("simSeconds", selected.columns)
+        self.assertIn("simTicks", selected.columns)
+
     def test_render_run_report_markdown_renders_table(self) -> None:
         frame = self.load_frame()
         report = render_run_report_markdown(
@@ -304,6 +354,26 @@ class AnalysisTests(unittest.TestCase):
                 ["simSeconds"],
                 run_names=["config1_loop1", "config1_loop1"],
             )
+
+    def test_select_runs_rejects_unknown_stat_name(self) -> None:
+        frame = self.load_frame()
+        with self.assertRaisesRegex(Gem5AnalysisError, "Unknown stat column"):
+            select_runs(frame, stat_names=["does_not_exist"])
+
+    def test_select_runs_rejects_unknown_run_name(self) -> None:
+        frame = self.load_frame()
+        with self.assertRaisesRegex(Gem5AnalysisError, "Unknown run name"):
+            select_runs(frame, run_names=["does_not_exist"])
+
+    def test_select_runs_rejects_duplicate_stat_names(self) -> None:
+        frame = self.load_frame()
+        with self.assertRaisesRegex(Gem5AnalysisError, "Duplicate stat_names"):
+            select_runs(frame, stat_names=["simSeconds", "simSeconds"])
+
+    def test_select_runs_rejects_duplicate_run_names(self) -> None:
+        frame = self.load_frame()
+        with self.assertRaisesRegex(Gem5AnalysisError, "Duplicate run_names"):
+            select_runs(frame, run_names=["config1_loop1", "config1_loop1"])
 
 
 if __name__ == "__main__":
