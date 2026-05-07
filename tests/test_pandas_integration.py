@@ -3,13 +3,12 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-import unittest
-
 try:
     import pandas as pd
 except ImportError:  # pragma: no cover - environment dependent
     pd = None
+from pathlib import Path
+import unittest
 
 from gem5_helpers import (
     build_run_report,

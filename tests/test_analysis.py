@@ -4,11 +4,7 @@
 from __future__ import annotations
 
 from math import nan
-from pathlib import Path
-import sys
-import types
 import unittest
-from unittest.mock import patch
 
 from gem5_helpers.analysis import (
     Gem5AnalysisError,
@@ -23,95 +19,12 @@ from gem5_helpers.analysis import (
     select_runs,
     sort_runs_by_stat,
 )
-
-
-class FakeSeries:
-    def __init__(self, values: list[object], index: list[int]) -> None:
-        self._values = values
-        self._index = index
-
-    def items(self):
-        return zip(self._index, self._values)
-
-
-class FakeLoc:
-    def __init__(self, frame: FakeDataFrame) -> None:
-        self._frame = frame
-
-    def __getitem__(self, index: int) -> dict[str, object]:
-        return dict(self._frame._records[index])
-
-
-class FakeDataFrame:
-    def __init__(self, records: list[dict[str, object]], columns: list[str]) -> None:
-        self._records = records
-        self.columns = columns
-        self.loc = FakeLoc(self)
-
-    @classmethod
-    def from_records(
-        cls, records: list[dict[str, object]], columns: list[str]
-    ) -> FakeDataFrame:
-        return cls(records=[dict(record) for record in records], columns=columns)
-
-    def __getitem__(self, key: str) -> FakeSeries:
-        return FakeSeries(
-            values=[record.get(key) for record in self._records],
-            index=list(range(len(self._records))),
-        )
-
-    def __setitem__(self, key: str, value: object) -> None:
-        if key not in self.columns:
-            self.columns.append(key)
-        for record in self._records:
-            record[key] = value
-
-    def sort_values(
-        self, by: str, ascending: bool = True, na_position: str = "last"
-    ) -> FakeDataFrame:
-        if na_position != "last":
-            raise AssertionError("FakeDataFrame only supports na_position='last'")
-
-        def is_nan_value(value: object) -> bool:
-            return isinstance(value, float) and value != value
-
-        def key_fn(item: tuple[int, dict[str, object]]):
-            value = item[1].get(by)
-            return (is_nan_value(value), value)
-
-        sorted_items = sorted(
-            enumerate(self._records), key=key_fn, reverse=not ascending
-        )
-
-        if not ascending:
-            non_nan = [
-                record for _, record in sorted_items if not is_nan_value(record.get(by))
-            ]
-            nan_records = [
-                record for _, record in sorted_items if is_nan_value(record.get(by))
-            ]
-            sorted_records = non_nan + nan_records
-        else:
-            sorted_records = [record for _, record in sorted_items]
-
-        return FakeDataFrame(
-            records=[dict(record) for record in sorted_records],
-            columns=list(self.columns),
-        )
-
-
-def fake_pandas_module() -> types.ModuleType:
-    module = types.ModuleType("pandas")
-    module.DataFrame = FakeDataFrame
-    return module
+from tests._fake_pandas import FakeDataFrame, load_fake_frame
 
 
 class AnalysisTests(unittest.TestCase):
     def load_frame(self, include_run_path: bool = True) -> FakeDataFrame:
-        from gem5_helpers.runs import load_runs
-
-        with patch.dict(sys.modules, {"pandas": fake_pandas_module()}):
-            return load_runs(Path("examples"), include_run_path=include_run_path)
+        return load_fake_frame(include_run_path=include_run_path)
 
     def test_mean_stat_returns_mean_for_numeric_column(self) -> None:
         frame = self.load_frame()
@@ -328,13 +241,35 @@ class AnalysisTests(unittest.TestCase):
 
     def test_build_run_report_rejects_unknown_stat_name(self) -> None:
         frame = self.load_frame()
-        with self.assertRaisesRegex(Gem5AnalysisError, "Unknown stat column"):
-            build_run_report(frame, ["does_not_exist"])
+        for helper_name, reporter in (
+            ("build_run_report", lambda: build_run_report(frame, ["does_not_exist"])),
+            ("select_runs", lambda: select_runs(frame, stat_names=["does_not_exist"])),
+        ):
+            with self.subTest(helper=helper_name):
+                with self.assertRaisesRegex(Gem5AnalysisError, "Unknown stat column"):
+                    reporter()
 
     def test_build_run_report_rejects_unknown_run_name(self) -> None:
         frame = self.load_frame()
-        with self.assertRaisesRegex(Gem5AnalysisError, "Unknown run name"):
-            build_run_report(frame, ["simSeconds"], run_names=["does_not_exist"])
+        for helper_name, reporter in (
+            (
+                "build_run_report",
+                lambda: build_run_report(
+                    frame, ["simSeconds"], run_names=["does_not_exist"]
+                ),
+            ),
+            (
+                "select_runs",
+                lambda: select_runs(
+                    frame,
+                    run_names=["does_not_exist"],
+                    stat_names=["simSeconds"],
+                ),
+            ),
+        ):
+            with self.subTest(helper=helper_name):
+                with self.assertRaisesRegex(Gem5AnalysisError, "Unknown run name"):
+                    reporter()
 
     def test_build_run_report_rejects_empty_stat_names(self) -> None:
         frame = self.load_frame()
@@ -343,37 +278,60 @@ class AnalysisTests(unittest.TestCase):
 
     def test_build_run_report_rejects_duplicate_stat_names(self) -> None:
         frame = self.load_frame()
-        with self.assertRaisesRegex(Gem5AnalysisError, "Duplicate stat_names"):
-            build_run_report(frame, ["simSeconds", "simSeconds"])
+        for helper_name, reporter in (
+            (
+                "build_run_report",
+                lambda: build_run_report(frame, ["simSeconds", "simSeconds"]),
+            ),
+            (
+                "select_runs",
+                lambda: select_runs(frame, stat_names=["simSeconds", "simSeconds"]),
+            ),
+        ):
+            with self.subTest(helper=helper_name):
+                with self.assertRaisesRegex(Gem5AnalysisError, "Duplicate stat_names"):
+                    reporter()
 
     def test_build_run_report_rejects_duplicate_run_names(self) -> None:
         frame = self.load_frame()
-        with self.assertRaisesRegex(Gem5AnalysisError, "Duplicate run_names"):
+        for helper_name, reporter in (
+            (
+                "build_run_report",
+                lambda: build_run_report(
+                    frame,
+                    ["simSeconds"],
+                    run_names=["config1_loop1", "config1_loop1"],
+                ),
+            ),
+            (
+                "select_runs",
+                lambda: select_runs(
+                    frame,
+                    run_names=["config1_loop1", "config1_loop1"],
+                    stat_names=["simSeconds"],
+                ),
+            ),
+        ):
+            with self.subTest(helper=helper_name):
+                with self.assertRaisesRegex(Gem5AnalysisError, "Duplicate run_names"):
+                    reporter()
+
+    def test_build_run_report_delegates_selection_behavior(self) -> None:
+        frame = self.load_frame()
+        self.assertEqual(
             build_run_report(
                 frame,
-                ["simSeconds"],
-                run_names=["config1_loop1", "config1_loop1"],
-            )
-
-    def test_select_runs_rejects_unknown_stat_name(self) -> None:
-        frame = self.load_frame()
-        with self.assertRaisesRegex(Gem5AnalysisError, "Unknown stat column"):
-            select_runs(frame, stat_names=["does_not_exist"])
-
-    def test_select_runs_rejects_unknown_run_name(self) -> None:
-        frame = self.load_frame()
-        with self.assertRaisesRegex(Gem5AnalysisError, "Unknown run name"):
-            select_runs(frame, run_names=["does_not_exist"])
-
-    def test_select_runs_rejects_duplicate_stat_names(self) -> None:
-        frame = self.load_frame()
-        with self.assertRaisesRegex(Gem5AnalysisError, "Duplicate stat_names"):
-            select_runs(frame, stat_names=["simSeconds", "simSeconds"])
-
-    def test_select_runs_rejects_duplicate_run_names(self) -> None:
-        frame = self.load_frame()
-        with self.assertRaisesRegex(Gem5AnalysisError, "Duplicate run_names"):
-            select_runs(frame, run_names=["config1_loop1", "config1_loop1"])
+                ["simTicks", "simSeconds"],
+                run_names=["default_op2_loop0"],
+            )._records,
+            [
+                {
+                    "run_name": "default_op2_loop0",
+                    "simTicks": 450521000.0,
+                    "simSeconds": 0.000451,
+                }
+            ],
+        )
 
 
 if __name__ == "__main__":
