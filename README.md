@@ -23,6 +23,12 @@ Example outputs live under `examples/`.
   maximum value for a numeric stat column
 - `gem5_helpers.sort_runs_by_stat(frame, stat_name, ascending=True)`: return
   the runs sorted by a numeric stat column
+- `gem5_helpers.build_run_report(frame, stat_names, run_names=None)`: select a
+  narrow run report containing `run_name` plus chosen stat columns
+- `gem5_helpers.render_run_report_markdown(...)`: render a selected run report
+  as a Markdown table
+- `gem5_helpers.render_run_report_csv(...)`: render a selected run report as
+  CSV text
 - `analyse_gem5.py`: thin CLI wrapper around `load_runs`
 
 The batch loader includes a `run_name` column for the child directory name and
@@ -30,6 +36,32 @@ optionally a `run_path` column for traceability.
 
 The analysis helpers operate on the batch dataframe returned by `load_runs(...)`
 and keep raw stat values unchanged.
+
+## Reporting Example
+
+```python
+from gem5_helpers import (
+    load_runs,
+    render_run_report_csv,
+    render_run_report_markdown,
+)
+
+frame = load_runs("examples", include_run_path=False)
+run_names = ["default_op2_loop0", "config1_loop1"]
+stat_names = ["simSeconds", "simTicks"]
+
+markdown_table = render_run_report_markdown(
+    frame,
+    stat_names=stat_names,
+    run_names=run_names,
+)
+
+csv_text = render_run_report_csv(
+    frame,
+    stat_names=stat_names,
+    run_names=run_names,
+)
+```
 
 ## Goals
 
