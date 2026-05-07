@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 chriscomputing
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -128,4 +131,3 @@ def load_runs(
     columns.extend(stat_columns)
 
     return pd.DataFrame.from_records(records, columns=columns)
-

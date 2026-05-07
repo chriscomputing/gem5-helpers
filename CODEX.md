@@ -26,11 +26,8 @@ session and future work.
 - `dump_index` is zero-based and defaults to the first stats dump.
 - The analysis layer should preserve raw stat values and should not normalize
   the data.
-
-## Open Questions
-
-- What analyses are most valuable first: summaries, comparisons, validation, or
-  feature extraction?
-- Should the tool work as a library, a CLI, or both?
-- Which additional derived views, if any, should be added on top of the raw
-  stats table?
+- The first analysis helpers are dataframe-based and accept a stat name as a
+  string column selector.
+- The initial analysis API includes mean, min-run, max-run, and sorted-runs
+  helpers.
+- Extrema helpers return the full run row rather than only the scalar value.

@@ -15,10 +15,21 @@ Example outputs live under `examples/`.
 - `gem5_helpers.load_run(path, dump_index=0)`: load one run directory
 - `gem5_helpers.load_runs(parent_dir, dump_index=0)`: load all valid run
   directories beneath a parent directory into one wide dataframe
+- `gem5_helpers.mean_stat(frame, stat_name)`: compute the mean of a numeric
+  stat column across runs
+- `gem5_helpers.min_run_by_stat(frame, stat_name)`: return the run row with the
+  minimum value for a numeric stat column
+- `gem5_helpers.max_run_by_stat(frame, stat_name)`: return the run row with the
+  maximum value for a numeric stat column
+- `gem5_helpers.sort_runs_by_stat(frame, stat_name, ascending=True)`: return
+  the runs sorted by a numeric stat column
 - `analyse_gem5.py`: thin CLI wrapper around `load_runs`
 
 The batch loader includes a `run_name` column for the child directory name and
 optionally a `run_path` column for traceability.
+
+The analysis helpers operate on the batch dataframe returned by `load_runs(...)`
+and keep raw stat values unchanged.
 
 ## Goals
 

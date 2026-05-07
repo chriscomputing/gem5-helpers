@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 chriscomputing
+
 from __future__ import annotations
 
 from pathlib import Path

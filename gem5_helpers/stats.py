@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 chriscomputing
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -109,4 +112,3 @@ def load_stats_file(path: Path, dump_index: int = 0) -> tuple[dict[str, float], 
 
     selected_dump = dumps[dump_index]
     return parse_stats_dump(selected_dump.lines), len(dumps)
-
