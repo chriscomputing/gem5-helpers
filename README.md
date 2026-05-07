@@ -125,6 +125,47 @@ csv_text = render_run_report_csv(
 )
 ```
 
+## Example Scripts
+
+The repository root includes a few small example scripts that show how to use
+the public API from the command line.
+
+- `analyse_gem5.py`: thin CLI wrapper around `load_runs(...)`
+- `generate_results_table.py`: render a selected run report as CSV or Markdown
+- `report_top_runs.py`: rank runs by one stat and print the top `n` as CSV
+- `load_runs_example.py`: no-arguments example showing full-directory loading
+  and selected-run filtering
+
+Generate a CSV report by default:
+
+```bash
+python generate_results_table.py examples --stats simSeconds,simTicks
+```
+
+Generate a Markdown report:
+
+```bash
+python generate_results_table.py examples --stats simSeconds,simTicks --md
+```
+
+Report the top two runs for one stat, descending by default:
+
+```bash
+python report_top_runs.py examples --stat simTicks --top-n 2
+```
+
+Report the top two runs in ascending order for a selected subset:
+
+```bash
+python report_top_runs.py examples --stat simSeconds --runs default_op2_loop0,config1_loop1 --top-n 2 --asc
+```
+
+Run the no-arguments loading example from the repository root:
+
+```bash
+python load_runs_example.py
+```
+
 ## API Stability
 
 Stable public API:
