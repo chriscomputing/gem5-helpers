@@ -1,6 +1,11 @@
 [project]
 name = "gem5-helpers"
 version = "0.1.0"
-description = "Add your description here"
+description = "Helpers for programmatic gem5 simulation output analysis"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+  "pandas>=2.2",
+]
+
+[project.scripts]
+analyse-gem5 = "analyse_gem5:main"
