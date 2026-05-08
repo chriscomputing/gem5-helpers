@@ -1,5 +1,6 @@
 .idea/
 examples/
+scripts/
 __pycache__/
 *.pyc
 *.pyo
