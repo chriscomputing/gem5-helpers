@@ -1,6 +1,7 @@
 .idea/
 examples/
-scripts/
+testresults/
 __pycache__/
 *.pyc
 *.pyo
+*.png
