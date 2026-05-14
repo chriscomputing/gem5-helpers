@@ -9,7 +9,8 @@ config_mapping = {
     'config_0': 128,
     'config_1': 256,
     'config_2': 512,
-    'config_3': 1024
+    'config_3': 1024,
+    "config_4": 2048
 }
 
 def plot_simd_efficiency(csv_path):
@@ -17,7 +18,7 @@ def plot_simd_efficiency(csv_path):
     df = pd.read_csv(csv_path)
 
     # Column aliases for readability based on gem5 output names
-    total_col = 'board.processor.cores.core.commit.committedInstType_0::total'
+    scalar = 'board.processor.cores.core.commit.committedInstType_0::IntAlu'
     cmp_col = 'board.processor.cores.core.commit.committedInstType_0::SimdCmp'
     fma_col = 'board.processor.cores.core.commit.committedInstType_0::SimdFloatMultAcc'
 
@@ -30,12 +31,10 @@ def plot_simd_efficiency(csv_path):
     # 2. Calculate instruction counts
     # SIMD instructions is the sum of SimdCmp and SimdFloatMultAcc
     df['simd_insts'] = df[cmp_col] + df[fma_col]
-    # Scalar instructions is Total - SIMD
-    df['scalar_insts'] = df[total_col] - df['simd_insts']
 
     # 3. Calculate SIMD efficiency using the provided formula:
     # ((scalar instructions / simd instructions) / x-value)
-    df['efficiency'] = (df['scalar_insts'] / df['simd_insts']) / df['x_val']
+    df['efficiency'] = (df[scalar] / df['simd_insts']) / df['x_val']
 
     # 4. Plotting
     plt.figure(figsize=(10, 6))
@@ -50,7 +49,7 @@ def plot_simd_efficiency(csv_path):
     plt.xlabel('Vector Length (bits)')
     plt.ylabel('SIMD Efficiency')
     plt.title('SIMD Efficiency of daxpy and simple_triad (sve, acle) vs Vector Length')
-    plt.xticks([128, 256, 512, 1024])
+    plt.xticks([128, 256, 512, 1024, 2048])
     plt.grid(True, linestyle='--', alpha=0.7)
     plt.legend()
     
