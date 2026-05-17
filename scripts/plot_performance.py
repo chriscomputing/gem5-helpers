@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Define the file path
-file_path = '/home/christopher/sciebo/SoSe2026/HPC Lab/Analyse/Lab 5/tables/lab5_assignment4-2_all.csv'
+file_path = '/home/christopher/sciebo/SoSe2026/HPC Lab/Analyse/Lab 5/tables/lab5_assignment4-2_spmv.csv'
 
 # Mapping for the x-values (Vector Length in bits)
 config_mapping = {
@@ -13,14 +13,13 @@ config_mapping = {
     "config_4": 2048
 }
 
-def plot_simd_efficiency(csv_path):
+def plot_simd_efficiency(csv_path, use_log_y=True):
     # Load the dataset
     df = pd.read_csv(csv_path)
 
     # Column aliases for readability based on gem5 output names
     ipc = "board.processor.cores.core.ipc"
     cycles = "board.processor.cores.core.numCycles"
-    print(df.head())
 
     # 1. Parse the run_name to extract configuration and benchmark type
     # run_name format: config_N-benchmark-type
@@ -38,9 +37,12 @@ def plot_simd_efficiency(csv_path):
         subset = df[df['label'] == label].sort_values('x_val')
         plt.plot(subset['x_val'], subset[cycles], marker='o', label=label)
 
+    if use_log_y:
+        plt.yscale('log')
+
     plt.xlabel('Vector Length (bits)')
-    plt.ylabel('SIMD Efficiency')
-    plt.title('SIMD Efficiency vs Vector Length (spmv)')
+    plt.ylabel('Number of cycles')
+    plt.title('Total number of cycles vs Vector Length (spmv)')
     plt.xticks([128, 256, 512, 1024, 2048])
     plt.grid(True, linestyle='--', alpha=0.7)
     plt.legend()
@@ -48,10 +50,10 @@ def plot_simd_efficiency(csv_path):
     # Show the plot
     plt.tight_layout()
     # plt.show()
-    plt.savefig("assignment4-2_all_cycles.png")
+    plt.savefig("assignment4-2_spmv_cycles.png")
 
 if __name__ == "__main__":
     try:
-        plot_simd_efficiency(file_path)
+        plot_simd_efficiency(file_path, True)
     except Exception as e:
         print(f"Error processing CSV: {e}")
